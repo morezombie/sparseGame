@@ -1,13 +1,180 @@
-
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <set>
 #include <regex>
 
-
+// 输入
 constexpr float threshold = 6.0f;
+const static std::string input = R"(
+const threshold = 6;
+const input = [{
+    x: 10,
+    y: 60
+}, {
+    x: 12,
+    y: 46
+}, {
+    x: 15,
+    y: 36
+}, {
+    x: 23,
+    y: 29
+}, {
+    x: 28,
+    y: 34
+}, {
+    x: 30,
+    y: 46
+}, {
+    x: 30,
+    y: 56
+}, {
+    x: 27,
+    y: 66
+}, {
+    x: 26,
+    y: 76
+}, {
+    x: 30,
+    y: 85
+}, {
+    x: 34,
+    y: 87
+}, {
+    x: 40,
+    y: 78
+}, {
+    x: 42,
+    y: 72
+}, {
+    x: 43,
+    y: 60
+}, {
+    x: 44,
+    y: 51
+}, {
+    x: 46,
+    y: 38
+}, {
+    x: 46,
+    y: 26
+}, {
+    x: 49,
+    y: 17
+}, {
+    x: 58,
+    y: 11
+}, {
+    x: 63,
+    y: 24
+}, {
+    x: 61,
+    y: 38
+}, {
+    x: 60,
+    y: 55
+}, {
+    x: 59,
+    y: 67
+}, {
+    x: 58,
+    y: 82
+}, {
+    x: 64,
+    y: 90
+}, {
+    x: 68,
+    y: 91
+}, {
+    x: 79,
+    y: 89
+}, {
+    x: 84,
+    y: 82
+}, {
+    x: 85,
+    y: 70
+}, {
+    x: 83,
+    y: 60
+}, {
+    x: 80,
+    y: 50
+}, {
+    x: 79,
+    y: 36
+}, {
+    x: 82,
+    y: 26
+}, {
+    x: 86,
+    y: 20
+}, {
+    x: 94,
+    y: 17
+}, {
+    x: 113,
+    y: 15
+}, {
+    x: 127,
+    y: 19
+}, {
+    x: 133,
+    y: 28
+}, {
+    x: 134,
+    y: 40
+}, {
+    x: 134,
+    y: 53
+}, {
+    x: 131,
+    y: 62
+}, {
+    x: 124,
+    y: 72
+}, {
+    x: 116,
+    y: 76
+}, {
+    x: 105,
+    y: 77
+}, {
+    x: 99,
+    y: 73
+}, {
+    x: 94,
+    y: 63
+}, {
+    x: 95,
+    y: 50
+}, {
+    x: 102,
+    y: 41
+}, {
+    x: 111,
+    y: 34
+}, {
+    x: 123,
+    y: 42
+}, {
+    x: 122,
+    y: 53
+}, {
+    x: 116,
+    y: 61
+}, {
+    x: 109,
+    y: 64
+}, {
+    x: 106,
+    y: 58
+}]
+    )";
 
+// 抽稀类
 class Sparser {
 public:
 struct Point {
@@ -26,52 +193,37 @@ void sparse(const std::string& json, std::string& sparseJson) {
     convertPointsToJson(sparsePoints, sparseJson);
 }
 
+private:
 void convertJsonToPoints(const std::string& json, std::vector<Point>& points) {
-    // 输入形如
-    /*
-    [{
-    x: 10,
-    y: 60
-}, {
-    x: 106,
-    y: 58
-}]
-*/
     // 使用正则表达式获取x和y的值
-    std::regex re(R"((\d+),\s*(\d+))");
-    std::smatch match;
-    std::string::const_iterator begin = json.begin();
-    std::string::const_iterator end = json.end();
-    while (std::regex_search(begin, end, match, re)) {
-        // 匹配成功，获取x和y的值
-        int32_t x = std::stoi(match[1].str());
-        int32_t y = std::stoi(match[2].str());
-        // 将x和y添加到点的集合中
-        Point p = {x, y};
-        // 移动begin到下一次匹配的位置
-        begin = match.suffix().first;
+    std::regex regex(R"(\{\s*x:\s*(\d+),\s*y:\s*(\d+)\s*\})");
+    std::smatch matches;
+    std::string::const_iterator searchStart(json.cbegin());
+    while (regex_search(searchStart, json.cend(), matches, regex)) {
+        int x = std::stoi(matches[1].str());
+        int y = std::stoi(matches[2].str());
+        points.push_back(Point{x, y});
+        searchStart = matches.suffix().first;
     }
 }
 
 void convertPointsToJson(const std::vector<Point>& points, std::string& json) {
     // 将points转换为字符串
     std::ostringstream ss;
-    ss << "[";
+    ss << "[ ";
     for (size_t i = 0; i < points.size(); i++) {
-        ss << "{" << "x:" << points[i].x << ", " << "y:" << points[i].y << "}";
+        ss << "[ " << points[i].x << ", " << points[i].y << " ]";
         if (i < points.size() - 1) {
             ss << ", ";
         }
     }
-    ss << "]";
+    ss << " ]";
     json = ss.str();
 }
 
-// 定义calculateSparsePoints函数
 void calculateSparsePoints(const std::vector<Point>& points, std::vector<Point> &sparsePoints) {
+    // 计算稀疏点
     std::set<size_t> sparseIdxs;
-
-    std::cout << "points size: " << points.size() << std::endl;
     calculate(points, sparseIdxs, 0, points.size() - 1);
     for (size_t idx : sparseIdxs) {
         sparsePoints.push_back(points[idx]);
@@ -79,55 +231,69 @@ void calculateSparsePoints(const std::vector<Point>& points, std::vector<Point> 
 }
 
 
-// 定义calculate函数
+// 给定起点和终点，递归抽稀
 bool calculate(const std::vector<Point>& points
                         , std::set<size_t> &sparseIdxs
                         , size_t start, size_t end) {
-    if ((int32_t)start >= (int32_t)end) {
-        std::cout << "start: " << (int32_t)start << ", end: " << (int32_t)end << std::endl;
+    if ((int32_t)start > (int32_t)end) {
         return false;
     }
     float maxL = 0;
+    size_t peakIdx = start;
     sparseIdxs.insert(start);
     sparseIdxs.insert(end);
-    for (size_t i = start; i < end; i++) {
-        float l = calcDist(points[i], points[start], points[end]);
-        maxL = std::max(maxL, l);
-        std::cout << "maxL: " << maxL << std::endl;
-        if (l > threshold) {
-            calculate(points, sparseIdxs, start, i);
-            calculate(points, sparseIdxs, i, end);
-            break;
+    for (size_t i = start + 1; i < end; i++) {
+        int32_t d = calcDist(points[i], points[start], points[end]);
+        float l = convertToRealDist(d, points[start], points[end]);
+        if (l > maxL) {
+            maxL = l;
+            peakIdx = i;
         }
+    }
+    if (maxL > threshold) {
+        calculate(points, sparseIdxs, start, peakIdx);
+        calculate(points, sparseIdxs, peakIdx, end);
     }
     return true;
 }
 
-float calcDist(const Point &p, const Point &start, const Point &end) {
-    // 距离l = |(y2 - y1)*x3 + (x1 - x2)*y3 + (x2*y1 - x1*y2)| / sqrt((y2 - y2)^2 + (x2 - x2)^2) 
-    float l = (end.y - start.y) * p.x + (start.x - end.x) * p.y + (start.y * end.x - end.y * start.x);
-    l = std::abs(l) / sqrtf((end.y - start.y) * (end.y - start.y) + (start.x - end.x) * (start.x - end.x));
-    std::cout << "l: " << l << std::endl;
+// 计算点到直线的距离
+int32_t calcDist(const Point &p, const Point &start, const Point &end) {
+    if (start.x == end.x && start.y == end.y) {
+        // TRICKY: 无需开方
+        int32_t d = (p.x - start.x) * (p.x - start.x) + (p.y - start.y) * (p.y - start.y);
+        return d;
+    }
+
+    // 直线方程的系数 A, B, C
+    int32_t A = end.y - start.y;
+    int32_t B = start.x - end.x;
+    int32_t C = end.x * start.y - start.x * end.y;
+
+    // 使用点到直线的距离公式
+    // TRICKY: 无需除以start到end的长度，节约计算量
+    int32_t l = std::abs(A * p.x + B * p.y + C);
     return l;
+}
+
+// 转换为真实距离
+float convertToRealDist(int32_t l, const Point &start, const Point &end) {
+    if (start.x == end.x && start.y == end.y) {
+        return std::sqrt(l);
+    } else {
+        int32_t A = end.y - start.y;
+        int32_t B = start.x - end.x;
+        return 1.0 * l / std::sqrt(A * A + B * B);
+    }
 }
 
 };
 
-
+// 测试函数
 int main() {
-    std::string input = R"(
-const input = [{
-    x: 10,
-    y: 60
-}, {
-    x: 106,
-    y: 58
-}]
-    )";
     Sparser sparser;
     std::string output;
     sparser.sparse(input, output);
     std::cout << output << std::endl;
-
     return 0;
 }
